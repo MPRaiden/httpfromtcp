@@ -13,8 +13,8 @@ func getLinesChannel(f io.ReadCloser) <-chan string {
 	go func() {
 		defer f.Close()
 
-		buffer := make([]byte, 8) // Read 8 bytes at a time
-		var currentLine []byte    // Use byte slice instead of string
+		buffer := make([]byte, 8)
+		var currentLine []byte
 
 		for {
 			n, err := f.Read(buffer)
@@ -22,12 +22,10 @@ func getLinesChannel(f io.ReadCloser) <-chan string {
 				if err == io.EOF {
 					// End of file reached
 					if len(currentLine) > 0 {
-						// Send the last line if it exists
 						stringChannel <- string(currentLine)
 					}
 					break
 				}
-				// Handle other errors if needed
 				break
 			}
 
@@ -38,7 +36,6 @@ func getLinesChannel(f io.ReadCloser) <-chan string {
 					stringChannel <- string(currentLine)
 					currentLine = currentLine[:0] // Clear the slice
 				} else {
-					// Add byte to current line
 					currentLine = append(currentLine, buffer[i])
 				}
 			}
