@@ -2,8 +2,22 @@ package main
 
 import (
 	"fmt"
+	"io"
+	"log"
+	"os"
 )
 
 func main() {
-	fmt.Println("I hope I get the job!")
+	file, err := os.Open("messages.txt")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+
+	buffer := make([]byte, 8) // Read 8 bytes at a time
+
+	for err != io.EOF {
+		_, err = file.Read(buffer)
+		fmt.Printf("read: %s\n", string(buffer))
+	}
 }
