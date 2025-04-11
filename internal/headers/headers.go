@@ -37,7 +37,16 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 	if !validTokens([]byte(key)) {
 		return 0, false, fmt.Errorf("invalid header token found: %s", key)
 	}
-	h.Set(key, string(value))
+
+	// Check if header key already exists (if it does append value separated by comma
+	existingValue, exists := h[key]
+	if exists {
+		h[key] = existingValue + ", " + string(value)
+	} else {
+
+		h[key] = string(value)
+	}
+
 	return idx + 2, false, nil
 }
 
