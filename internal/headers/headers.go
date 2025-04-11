@@ -2,69 +2,62 @@ package headers
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"strings"
 )
 
+const crlf = "\r\n"
+
 type Headers map[string]string
 
-const crlf = "\r\n"
+func NewHeaders() Headers {
+	return map[string]string{}
+}
 
 func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 	idx := bytes.Index(data, []byte(crlf))
 	if idx == -1 {
 		return 0, false, nil
 	}
-
 	if idx == 0 {
-		return len(crlf), true, nil // Consume 2 bytes, signify parsing is done, no error
+		// the empty line
+		// headers are done, consume the CRLF
+		return 2, true, nil
 	}
 
-	headers := string(data[:idx])
-	parts := strings.SplitN(headers, ":", 2)
+	parts := bytes.SplitN(data[:idx], []byte(":"), 2)
+	key := strings.ToLower(string(parts[0]))
 
-	if len(parts) != 2 {
-		return 0, false, errors.New("func Parse() - invalid header format: missing ':' separator")
+	if key != strings.TrimRight(key, " ") {
+		return 0, false, fmt.Errorf("invalid header name: %s", key)
 	}
 
-	key := parts[0]
-	key = strings.TrimSpace(key) // Finally clean valid keys
-
-	err = validateHeaderKey(key)
-	if err != nil {
-		return 0, false, err
+	value := bytes.TrimSpace(parts[1])
+	key = strings.TrimSpace(key)
+	if !validTokens([]byte(key)) {
+		return 0, false, fmt.Errorf("invalid header token found: %s", key)
 	}
-
-	value := strings.TrimSpace(parts[1])
-
-	lowerCaseKey := strings.ToLower(key)
-
-	h[lowerCaseKey] = value
-
-	return (idx + len(crlf)), false, nil
+	h.Set(key, string(value))
+	return idx + 2, false, nil
 }
 
-func validateHeaderKey(key string) error {
-	if key == "" {
-		return errors.New("func validateHeaderKey() - invalid header format: empty key")
-	}
+func (h Headers) Set(key, value string) {
+	key = strings.ToLower(key)
+	h[key] = value
+}
 
-	// Check for valid characters
-	for _, char := range key {
-		// Check if character is in the allowed set:
-		// A-Z, a-z, 0-9, or one of the special characters: !#$%&'*+-.^_`|~
-		if !((char >= 'A' && char <= 'Z') ||
-			(char >= 'a' && char <= 'z') ||
-			(char >= '0' && char <= '9') ||
-			strings.ContainsRune("!#$%&'*+-.^_`|~", char)) {
-			return fmt.Errorf("invalid character in header key: %c", char)
+var tokenChars = []byte{'!', '#', '$', '%', '&', '\'', '*', '+', '-', '.', '^', '_', '`', '|', '~'}
+
+// validTokens checks if the data contains only valid tokens
+// or characters that are allowed in a token
+func validTokens(data []byte) bool {
+	for _, c := range data {
+		if !(c >= 'A' && c <= 'Z' ||
+			c >= 'a' && c <= 'z' ||
+			c >= '0' && c <= '9' ||
+			c == '-') {
+			return false
 		}
 	}
-
-	return nil
-}
-
-func NewHeaders() Headers {
-	return make(Headers)
+	return true
 }
