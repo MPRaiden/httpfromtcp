@@ -22,7 +22,6 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		defer connection.Close()
 
 		fmt.Println("Connection has been accepted")
 
